@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tap2Print</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+    <!-- ✅ NAVBAR -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">Tap2Print</a>
+
+            <div class="ms-auto">
+                {% if session.get('admin') %}
+                    <a href="/dashboard" class="btn btn-sm btn-warning me-2">Dashboard</a>
+                    <a href="/logout" class="btn btn-sm btn-danger">Logout</a>
+                {% else %}
+                    <a href="/login" class="btn btn-sm btn-outline-light">Admin</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+
+                <div class="card shadow-lg border-0 rounded-4">
+                    <div class="card-body p-4">
+
+                        <!-- Branding -->
+                        <h2 class="text-center fw-bold mb-1">Tap2Print</h2>
+                        <p class="text-center text-muted mb-4">
+                            Scan. Pay. Print.
+                        </p>
+
+                        <!-- Upload Form -->
+                        <form action="/upload" method="POST" enctype="multipart/form-data">
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Select Document</label>
+                                <input type="file" name="file" class="form-control" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Number of Copies</label>
+                                <input type="number" name="copies" value="1" min="1" class="form-control">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Color Mode</label>
+                                <select name="color_mode" class="form-select">
+                                    <option>Black & White</option>
+                                    <option>Color</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold">Paper Size</label>
+                                <select name="paper_size" class="form-select">
+                                    <option>A4</option>
+                                    <option>A3</option>
+                                </select>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 rounded-3">
+                                Upload & Generate QR
+                            </button>
+
+                        </form>
+
+                    </div>
+                </div>
+
+                <!-- ✅ ABOUT SECTION -->
+                <hr class="my-5">
+
+                <div class="text-center px-3">
+                    <h4 class="fw-semibold">Why Tap2Print?</h4>
+                    <p class="text-muted mt-3">
+                        Tap2Print is a smart self-service printing solution designed for
+                        colleges, libraries, offices, and public kiosks.
+                        Upload your file, scan the QR code at the printer,
+                        and print instantly — no waiting in queues.
+                    </p>
+                </div>
+
+                <!-- Footer -->
+                <p class="text-center text-muted mt-4 small">
+                    © 2026 Tap2Print. Built for seamless self-service printing.
+                </p>
+
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
