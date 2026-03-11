@@ -5,6 +5,7 @@ from werkzeug.utils import secure_filename
 import os
 import qrcode
 import uuid
+import razorpay
 
 app = Flask(__name__)
 
@@ -12,6 +13,14 @@ app = Flask(__name__)
 # SECRET KEY
 # ==============================
 app.secret_key = "tap2print_secret_key"
+
+# ==============================
+# RAZORPAY CONFIG
+# ==============================
+RAZORPAY_KEY_ID = "rzp_live_SPws4T1Osoyopu"
+RAZORPAY_KEY_SECRET = "2Hx2q5kuvZPAcYnU80tjmHCC"
+
+razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 # ==============================
 # DATABASE CONFIGURATION
@@ -23,7 +32,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # FILE SECURITY CONFIG
 # ==============================
 ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg'}
-MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+MAX_FILE_SIZE = 5 * 1024 * 1024
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 
 # ==============================
@@ -45,7 +54,6 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
 
-    # 🔐 Create default admin if not exists
     if not Admin.query.filter_by(username="admin").first():
         default_admin = Admin(username="admin")
         default_admin.set_password("admin123")
@@ -57,8 +65,7 @@ with app.app_context():
 # HELPER FUNCTION
 # ==============================
 def allowed_file(filename):
-    return '.' in filename and \
-        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 # ==============================
@@ -70,11 +77,13 @@ def home():
 
 
 # ==============================
-# ADMIN LOGIN (SECURE)
+# ADMIN LOGIN
 # ==============================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+
     if request.method == 'POST':
+
         username = request.form.get('username')
         password = request.form.get('password')
 
@@ -83,6 +92,7 @@ def login():
         if admin and admin.check_password(password):
             session['admin'] = admin.username
             return redirect('/dashboard')
+
         else:
             return render_template('login.html', error="Invalid Credentials")
 
@@ -99,10 +109,11 @@ def logout():
 
 
 # ==============================
-# SECURE FILE UPLOAD → PAYMENT
+# FILE UPLOAD
 # ==============================
 @app.route('/upload', methods=['POST'])
 def upload_file():
+
     file = request.files.get('file')
     copies = request.form.get('copies', 1)
     color_mode = request.form.get('color_mode', "Black & White")
@@ -112,14 +123,13 @@ def upload_file():
         return "❌ No file selected."
 
     if not allowed_file(file.filename):
-        return "❌ Invalid file type. Only PDF, JPG, PNG allowed."
+        return "❌ Invalid file type."
 
     original_filename = secure_filename(file.filename)
     unique_filename = str(uuid.uuid4()) + "_" + original_filename
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
     file.save(filepath)
 
-    # PRICE CALCULATION
     price_per_copy = 2 if color_mode == "Black & White" else 5
     total_price = price_per_copy * int(copies)
 
@@ -143,25 +153,42 @@ def upload_file():
 # ==============================
 @app.route('/payment/<job_id>')
 def payment(job_id):
+
     job = PrintJob.query.filter_by(job_id=job_id).first_or_404()
-    return render_template("payment.html", job=job)
+
+    amount = int(job.price * 100)
+
+    order = razorpay_client.order.create({
+        "amount": amount,
+        "currency": "INR",
+        "payment_capture": "1"
+    })
+
+    return render_template(
+        "payment.html",
+        job=job,
+        order_id=order['id'],
+        razorpay_key=RAZORPAY_KEY_ID
+    )
 
 
 # ==============================
-# PAYMENT CONFIRMATION
+# PAYMENT SUCCESS
 # ==============================
 @app.route('/pay/<job_id>', methods=['POST'])
 def pay(job_id):
+
     job = PrintJob.query.filter_by(job_id=job_id).first_or_404()
 
     job.is_paid = True
     db.session.commit()
 
-    # Generate QR AFTER payment
     qr_data = url_for('kiosk', job_id=job.job_id, _external=True)
+
     qr = qrcode.make(qr_data)
 
     qr_path = os.path.join(QR_FOLDER, f"{job.job_id}.png")
+
     qr.save(qr_path)
 
     return render_template(
@@ -172,34 +199,35 @@ def pay(job_id):
 
 
 # ==============================
-# KIOSK ROUTE (Protected + Auto Delete)
+# KIOSK
 # ==============================
 @app.route('/kiosk/<job_id>')
 def kiosk(job_id):
+
     job = PrintJob.query.filter_by(job_id=job_id).first_or_404()
 
     if not job.is_paid:
         return "❌ Payment not completed."
 
     if job.status == "Pending":
+
         job.status = "Printed"
 
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], job.filename)
 
         if os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-            except Exception as e:
-                print("File delete error:", e)
+            os.remove(file_path)
 
         db.session.commit()
-        return "✅ Job printed successfully and file deleted."
+
+        return "✅ Job printed successfully."
+
     else:
-        return "⚠️ This job is already printed."
+        return "⚠️ Already printed."
 
 
 # ==============================
-# DASHBOARD WITH FILTERS + ANALYTICS
+# DASHBOARD
 # ==============================
 @app.route('/dashboard')
 def dashboard():
@@ -213,21 +241,22 @@ def dashboard():
 
     if filter_type == 'paid':
         query = query.filter_by(is_paid=True)
+
     elif filter_type == 'unpaid':
         query = query.filter_by(is_paid=False)
+
     elif filter_type == 'printed':
         query = query.filter_by(status="Printed")
+
     elif filter_type == 'pending':
         query = query.filter_by(status="Pending")
 
     jobs = query.order_by(PrintJob.created_at.desc()).all()
 
-    # 💰 Revenue only from paid jobs
     total_revenue = sum(
         job.price for job in PrintJob.query.filter_by(is_paid=True).all()
     )
 
-    # 📈 Daily revenue analytics
     revenue_data = (
         db.session.query(
             func.date(PrintJob.created_at),

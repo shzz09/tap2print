@@ -3,3 +3,6 @@ Flask-SQLAlchemy
 gunicorn
 qrcode
 Pillow
+razorpay
+Werkzeug
+SQLAlchemy
