@@ -60,13 +60,11 @@ with app.app_context():
         db.session.add(default_admin)
         db.session.commit()
 
-
 # ==============================
 # HELPER FUNCTION
 # ==============================
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 
 # ==============================
 # HOME
@@ -74,7 +72,6 @@ def allowed_file(filename):
 @app.route('/')
 def home():
     return render_template('index.html')
-
 
 # ==============================
 # ADMIN LOGIN
@@ -98,7 +95,6 @@ def login():
 
     return render_template('login.html')
 
-
 # ==============================
 # LOGOUT
 # ==============================
@@ -106,7 +102,6 @@ def login():
 def logout():
     session.pop('admin', None)
     return redirect('/')
-
 
 # ==============================
 # FILE UPLOAD
@@ -120,10 +115,10 @@ def upload_file():
     paper_size = request.form.get('paper_size', "A4")
 
     if not file or file.filename == "":
-        return "❌ No file selected."
+        return "No file selected."
 
     if not allowed_file(file.filename):
-        return "❌ Invalid file type."
+        return "Invalid file type."
 
     original_filename = secure_filename(file.filename)
     unique_filename = str(uuid.uuid4()) + "_" + original_filename
@@ -137,16 +132,14 @@ def upload_file():
         filename=unique_filename,
         copies=int(copies),
         color_mode=color_mode,
-        paper_size=paper_size
+        paper_size=paper_size,
+        price=total_price
     )
-
-    new_job.price = total_price
 
     db.session.add(new_job)
     db.session.commit()
 
     return redirect(url_for('payment', job_id=new_job.job_id))
-
 
 # ==============================
 # PAYMENT PAGE
@@ -171,7 +164,6 @@ def payment(job_id):
         razorpay_key=RAZORPAY_KEY_ID
     )
 
-
 # ==============================
 # PAYMENT SUCCESS
 # ==============================
@@ -188,7 +180,6 @@ def pay(job_id):
     qr = qrcode.make(qr_data)
 
     qr_path = os.path.join(QR_FOLDER, f"{job.job_id}.png")
-
     qr.save(qr_path)
 
     return render_template(
@@ -196,7 +187,6 @@ def pay(job_id):
         job=job,
         qr_image=f"qrcodes/{job.job_id}.png"
     )
-
 
 # ==============================
 # KIOSK
@@ -207,7 +197,7 @@ def kiosk(job_id):
     job = PrintJob.query.filter_by(job_id=job_id).first_or_404()
 
     if not job.is_paid:
-        return "❌ Payment not completed."
+        return "Payment not completed."
 
     if job.status == "Pending":
 
@@ -220,11 +210,10 @@ def kiosk(job_id):
 
         db.session.commit()
 
-        return "✅ Job printed successfully."
+        return "Job printed successfully."
 
     else:
-        return "⚠️ Already printed."
-
+        return "Already printed."
 
 # ==============================
 # DASHBOARD
@@ -279,7 +268,6 @@ def dashboard():
         chart_dates=chart_dates,
         chart_revenues=chart_revenues
     )
-
 
 # ==============================
 # RUN SERVER
