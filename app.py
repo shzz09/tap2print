@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, url_for, redirect, session, jsonify
+from flask import Flask, render_template, request, url_for, redirect, session
 from models import db, PrintJob, Admin
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
@@ -182,16 +182,6 @@ def pay(job_id):
     qr_path = os.path.join(QR_FOLDER, f"{job.job_id}.png")
     qr.save(qr_path)
 
-    return jsonify({"status": "success"})
-
-# ==============================
-# SUCCESS PAGE
-# ==============================
-@app.route('/success/<job_id>')
-def success(job_id):
-
-    job = PrintJob.query.filter_by(job_id=job_id).first_or_404()
-
     return render_template(
         "success.html",
         job=job,
@@ -284,5 +274,3 @@ def dashboard():
 # ==============================
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)
-
-
