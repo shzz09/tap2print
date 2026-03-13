@@ -17,8 +17,8 @@ app.secret_key = "tap2print_secret_key"
 # ==============================
 # RAZORPAY CONFIG
 # ==============================
-RAZORPAY_KEY_ID = "YOUR_RAZORPAY_KEY"
-RAZORPAY_KEY_SECRET = "YOUR_RAZORPAY_SECRET"
+RAZORPAY_KEY_ID = "rzp_live_SPws4T1Osoyopu"
+RAZORPAY_KEY_SECRET = "2Hx2q5kuvZPAcYnU80tjmHCC"
 
 razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
