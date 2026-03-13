@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, url_for, redirect, session
+from flask import Flask, render_template, request, url_for, redirect, session, jsonify
 from models import db, PrintJob, Admin
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
@@ -17,8 +17,8 @@ app.secret_key = "tap2print_secret_key"
 # ==============================
 # RAZORPAY CONFIG
 # ==============================
-RAZORPAY_KEY_ID = "rzp_live_SPws4T1Osoyopu"
-RAZORPAY_KEY_SECRET = "2Hx2q5kuvZPAcYnU80tjmHCC"
+RAZORPAY_KEY_ID = "YOUR_RAZORPAY_KEY"
+RAZORPAY_KEY_SECRET = "YOUR_RAZORPAY_SECRET"
 
 razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
@@ -182,6 +182,16 @@ def pay(job_id):
     qr_path = os.path.join(QR_FOLDER, f"{job.job_id}.png")
     qr.save(qr_path)
 
+    return jsonify({"status": "success"})
+
+# ==============================
+# SUCCESS PAGE
+# ==============================
+@app.route('/success/<job_id>')
+def success(job_id):
+
+    job = PrintJob.query.filter_by(job_id=job_id).first_or_404()
+
     return render_template(
         "success.html",
         job=job,
@@ -274,3 +284,5 @@ def dashboard():
 # ==============================
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)
+
+

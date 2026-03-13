@@ -63,7 +63,6 @@ Pay ₹{{ job.price }}
 </p>
 
 </div>
-
 </div>
 
 <script>
@@ -95,10 +94,28 @@ razorpay_order_id: response.razorpay_order_id,
 razorpay_signature: response.razorpay_signature
 })
 })
-.then(res => res.text())
+
+.then(response => response.json())
+
 .then(data => {
 
+if(data.status === "success"){
+
 window.location.href="/success/{{ job.job_id }}";
+
+}else{
+
+alert("Payment verification failed");
+
+}
+
+})
+
+.catch(error => {
+
+console.error(error);
+
+alert("Server error during payment verification");
 
 });
 
@@ -124,3 +141,4 @@ e.preventDefault();
 
 </body>
 </html>
+
