@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, url_for, redirect, session
+from flask import Flask, render_template, request, url_for, redirect, session, jsonify
 from models import db, PrintJob, Admin
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
@@ -17,8 +17,8 @@ app.secret_key = "tap2print_secret_key"
 # ==============================
 # RAZORPAY CONFIG
 # ==============================
-RAZORPAY_KEY_ID = "rzp_live_SPws4T1Osoyopu"
-RAZORPAY_KEY_SECRET = "2Hx2q5kuvZPAcYnU80tjmHCC"
+RAZORPAY_KEY_ID = "rzp_live_SR0dXIj6z6Zqtf"
+RAZORPAY_KEY_SECRET = "z99XWphKQ1LWmqb53eEBVH81"
 
 razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
@@ -165,7 +165,7 @@ def payment(job_id):
     )
 
 # ==============================
-# PAYMENT SUCCESS
+# PAYMENT VERIFY
 # ==============================
 @app.route('/pay/<job_id>', methods=['POST'])
 def pay(job_id):
@@ -181,6 +181,16 @@ def pay(job_id):
 
     qr_path = os.path.join(QR_FOLDER, f"{job.job_id}.png")
     qr.save(qr_path)
+
+    return jsonify({"status": "success"})
+
+# ==============================
+# SUCCESS PAGE
+# ==============================
+@app.route('/success/<job_id>')
+def success(job_id):
+
+    job = PrintJob.query.filter_by(job_id=job_id).first_or_404()
 
     return render_template(
         "success.html",
@@ -224,49 +234,14 @@ def dashboard():
     if not session.get('admin'):
         return redirect('/login')
 
-    filter_type = request.args.get('filter', 'all')
+    jobs = PrintJob.query.order_by(PrintJob.created_at.desc()).all()
 
-    query = PrintJob.query
-
-    if filter_type == 'paid':
-        query = query.filter_by(is_paid=True)
-
-    elif filter_type == 'unpaid':
-        query = query.filter_by(is_paid=False)
-
-    elif filter_type == 'printed':
-        query = query.filter_by(status="Printed")
-
-    elif filter_type == 'pending':
-        query = query.filter_by(status="Pending")
-
-    jobs = query.order_by(PrintJob.created_at.desc()).all()
-
-    total_revenue = sum(
-        job.price for job in PrintJob.query.filter_by(is_paid=True).all()
-    )
-
-    revenue_data = (
-        db.session.query(
-            func.date(PrintJob.created_at),
-            func.sum(PrintJob.price)
-        )
-        .filter(PrintJob.is_paid == True)
-        .group_by(func.date(PrintJob.created_at))
-        .order_by(func.date(PrintJob.created_at))
-        .all()
-    )
-
-    chart_dates = [str(data[0]) for data in revenue_data]
-    chart_revenues = [data[1] for data in revenue_data]
+    total_revenue = sum(job.price for job in PrintJob.query.filter_by(is_paid=True).all())
 
     return render_template(
         "dashboard.html",
         jobs=jobs,
-        total_revenue=total_revenue,
-        current_filter=filter_type,
-        chart_dates=chart_dates,
-        chart_revenues=chart_revenues
+        total_revenue=total_revenue
     )
 
 # ==============================
